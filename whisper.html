@@ -9,11 +9,11 @@
     <div id="app">
         <div id="chatbox" v-html="reply">{{ reply }}</div>
         <p>
-            <label>房间暗号</label>
+            <label>cipher</label>
             <input type="text" v-model="room_id" />
         </p>
         <p>
-            <label>你的代号</label>
+            <label>username</label>
             <input type="text" v-model="user_id" />
         </p>
         <p><textarea v-model="message"></textarea></p>
