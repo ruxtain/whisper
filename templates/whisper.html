@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>业务数仓</title>
+<script type="text/javascript" src="static/vue.js"></script>
+<link rel="stylesheet" href="static/style.css" />
+</head>
+<body>
+    <div id="app">
+        <div id="chatbox" v-html="reply">{{ reply }}</div>
+        <p>
+            <label>cipher</label>
+            <input type="text" v-model="room_id" />
+        </p>
+        <p>
+            <label>username</label>
+            <input type="text" v-model="user_id" />
+        </p>
+        <p><textarea v-model="message"></textarea></p>
+        <button @click="send">send</button>
+    </div>
+</body>
+<script type="text/javascript">
+function randomString(e) {    
+    e = e || 8;
+    var t = "ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678",
+    a = t.length,
+    n = "";
+    for (i = 0; i < e; i++) n += t.charAt(Math.floor(Math.random() * a));
+    return n
+}
+
+var app = new Vue({
+    el: '#app',
+    data: {
+        message: '',
+        reply: '',
+        ws: '',
+        room_id: '001',
+        user_id: randomString()
+    },
+    created: function() {
+        this.initWebSocket();
+    },
+    destroyed: function() {
+        this.ws.close();
+    },
+    methods: {
+        initWebSocket: function() {
+            this.ws = new WebSocket("ws://172.17.150.194:8765");
+            this.ws.onmessage = this.onmessage;
+            this.ws.onopen = this.onopen;
+            this.ws.onerror = this.onerror;
+            this.ws.onclose = this.onclose;
+        },
+        send: function() {
+            // 不允许发送空消息
+            if (this.message.length > 0) {
+                this.ws.send(this.room_id + '|||' + this.user_id + '|||' + this.message);
+            }
+            this.scrollToBottom();
+            this.message = ''
+        },
+        onmessage: function(e) {
+            var msg = e.data.split('|||');
+            var room_id = msg[0];
+            var user_id = msg[1];
+            var content = msg[2];
+            this.reply += '<p class="item">' + '[' + user_id + ']: ' + content + '</p>';
+        },
+        onopen: function() { console.log('connected') },
+        onerror: function() {},
+        onclose: function() { console.log('closed') },
+        scrollToBottom: function () {
+            this.$nextTick(() => {
+                var container = this.$el.querySelector("#chatbox");
+                container.scrollTop = container.scrollHeight + 100;
+            });
+        }
+    }
+})
+</script>
+</html>
