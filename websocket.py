@@ -31,7 +31,7 @@ async def whisper(websocket, path):
         for ws in pool[room_id]:
             await ws.send('{}|||{}|||{}'.format(room_id, user_id, content))
 
-start_server = websockets.serve(whisper, 'localhost', 8765)
+start_server = websockets.serve(whisper, '172.17.150.194', 8765)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
