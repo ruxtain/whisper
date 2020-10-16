@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="shortcut icon" href="{% static 'core/favicon.png' %}" type=image/x-ico>
+<script type="text/javascript" src="{% static 'core/js/vue.js' %}"></script>
+<link rel="stylesheet" href="{% static 'core/css/style.css' %}" />
+<style type="text/css">
+#app {
+    font-size: 14px;
+}
+
+#chatbox {
+    width: 310px;
+    height: 400px;
+    border: 1px solid black;
+    /*vertical-align:bottom;*/
+    padding-bottom: 30px;
+    overflow: scroll;
+    overflow-wrap: break-word;
+    /*position: relative;*/
+}
+input.input-box {
+    margin-left: 10px;
+    outline: none;
+    width: 248px;
+}
+input.msg-box {
+    width: 303px;
+    resize: none;
+    outline: none;
+}
+p.item {
+    font-size: 0.5em;
+    margin: 12px;
+}
+</style>
+</head>
+<body>
+    <div id="app">
+        <p>状态: [[ status ]]</p>
+        <input type="hidden" v-model="status">
+        <div id="chatbox" v-html="reply">[[ reply ]]</div>
+        <p>
+            <label>房间号</label>
+            <input class="input-box" type="text" v-model="room_id" />
+        </p>
+        <p>
+            <label>用户名</label>
+            <input class="input-box" type="text" v-model="user_id" />
+        </p>
+        <p><input type="text" placeholder="请输入消息" class="msg-box" v-model="message" @keyup.enter="send"></p>
+        <button @click="send">ENTER</button>
+    </div>
+</body>
+<script type="text/javascript">
+function randomString(e) {    
+    var n = Math.floor(Math.random() * 100000);
+    return n
+}
+
+let message = {
+    timeout: null,
+    oldTitle: document.title,
+    time: 0,
+    showMessage(msg){
+        message.timeout = setInterval(function(){
+            message.time ++;
+            let title = '';
+            if(message.time % 2 === 0){
+                title = '业务数仓';
+            }else{
+                title = '【 ' + msg + ' 】';
+            }
+            document.title = title;
+        },600);
+
+    },
+    stopMessage(){
+        document.title = message.oldTitle;
+        clearTimeout(message.timeout);
+    }
+};
+
+function showMsg(){
+    message.showMessage('新消息');
+}
+
+function stopMsg(){
+    message.stopMessage('新消息');
+}
+
+
+var app = new Vue({
+    el: '#app',
+    delimiters: ['[[', ']]'],
+    data: {
+        ws: this.ws,
+        status: '下线', // 用户是否在线
+        message: '',
+        reply: '',
+        ws: '',
+        room_id: '001',
+        user_id: randomString(),
+        title: '业务数仓',
+        tick: 0, // 用于表示提示新消息的到来
+    },
+    created: function() {
+        document.title = this.title;
+        this.initWebSocket();
+        // 异步等待连接建立后发出初始信息，让服务器知道客户端的存在
+        // this.initSend()
+    },
+    destroyed: function() {
+        this.ws.close();
+    },
+    watch: {
+        tick: function(newTick, oldTick) {
+            console.log('tick = ' + this.tick);
+            showMsg()
+        },
+    },
+    methods: {
+        initWebSocket: function() {
+            this.ws = new WebSocket("ws://172.17.150.194:8765");
+            // 将内部方法注册到 ws 上
+            this.ws.onmessage = this.onmessage;
+            this.ws.onopen = this.onopen;
+            this.ws.onerror = this.onerror;
+            this.ws.onclose = this.onclose;
+        },
+        send: function() {
+            // 不允许发送空消息
+            if (this.message.length > 0) {
+                this.ws.send(this.room_id + '|||' + this.user_id + '|||' + this.message);
+            }
+            this.scrollToBottom();
+            this.message = ''
+        },
+        initSend: function() {
+            // 用于激活服务器..说白了是我不想改后台代码
+            // this.ws.onopen = () => {
+            //     this.ws.send('wake');
+            // }
+        },
+        onmessage: function(e) {
+            // setInterval(this.change_title, 1000);
+            var msg = e.data.split('|||');
+            var room_id = msg[0];
+            var user_id = msg[1];
+            var content = msg[2];
+            this.reply += '<p class="item">' + '[' + user_id + ']: ' + content + '</p>';
+            if (this.user_id != user_id) {
+                this.tick ++;     // 自己的消息不算新消息
+            }
+        },
+        onopen: function() { 
+            if (this.ws.readyState == 1) {
+                console.log('connection success');
+                this.status = '在线';
+            } else {
+                console.log('connection failed');
+                this.status = '下线';
+            }
+            
+        },
+        onerror: function() {},
+        onclose: function() { 
+            console.log('closed');
+            this.onopen(); //重连
+        },
+        scrollToBottom: function () {
+            this.$nextTick(() => {
+                var container = this.$el.querySelector("#chatbox");
+                container.scrollTop = container.scrollHeight + 100;
+            });
+        }
+    }
+})
+</script>
+</html>
