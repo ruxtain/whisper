@@ -7,12 +7,13 @@ import websockets
 pool = {}
 
 # 每当有人对我们ws服务发出请求，就会异步调用一次这个函数
+# 每一个 websocket 对象表示一对链接，即一个客户和服务器的一个链接。
 async def whisper(websocket, path):
-    
+    # print('test', len(websocket))
     # 我理解的 websocket 是所有 session 的集合
-    # 不过官方用的 message 来表示，我也就用 message，而不用 session 这个词了
+    # 不过官方用的 message 来表示, 我也就用 message，而不用 session 这个词了
     async for message in websocket:
-        print(dir(websocket))
+        # print(dir(websocket))
         # 我自定义的“协议”，用|||分割字段
         room_id, user_id, content = message.split('|||')
 

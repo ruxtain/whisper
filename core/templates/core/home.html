@@ -54,10 +54,6 @@ p.item {
     </div>
 </body>
 <script type="text/javascript">
-function randomString(e) {    
-    var n = Math.floor(Math.random() * 100000);
-    return n
-}
 
 let message = {
     timeout: null,
@@ -101,7 +97,7 @@ var app = new Vue({
         reply: '',
         ws: '',
         room_id: '001',
-        user_id: randomString(),
+        user_id: '{{ ip }}'.split('.').join(''), // 根据ip确定默认名字
         title: '业务数仓',
         tick: 0, // 用于表示提示新消息的到来
     },
@@ -109,7 +105,7 @@ var app = new Vue({
         document.title = this.title;
         this.initWebSocket();
         // 异步等待连接建立后发出初始信息，让服务器知道客户端的存在
-        // this.initSend()
+        this.send('test');
     },
     destroyed: function() {
         this.ws.close();
@@ -139,9 +135,9 @@ var app = new Vue({
         },
         initSend: function() {
             // 用于激活服务器..说白了是我不想改后台代码
-            // this.ws.onopen = () => {
-            //     this.ws.send('wake');
-            // }
+            this.ws.onopen = () => {
+                this.ws.send('wake');
+            }
         },
         onmessage: function(e) {
             // setInterval(this.change_title, 1000);
