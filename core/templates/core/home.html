@@ -9,6 +9,9 @@
 #app {
     font-size: 14px;
 }
+span.status {
+    margin-right: 30px;
+}
 
 #chatbox {
     width: 310px;
@@ -38,16 +41,16 @@ p.item {
 </head>
 <body>
     <div id="app">
-        <p>状态: [[ status ]]</p>
+        <p><span class="status">状态: [[ status ]]</span> <button @click="login">登录</button></p>
         <input type="hidden" v-model="status">
         <div id="chatbox" v-html="reply">[[ reply ]]</div>
         <p>
             <label>房间号</label>
-            <input class="input-box" type="text" v-model="room_id" />
+            <input class="input-box" type="text" v-model="room" />
         </p>
         <p>
             <label>用户名</label>
-            <input class="input-box" type="text" v-model="user_id" />
+            <input class="input-box" type="text" v-model="name" />
         </p>
         <p><input type="text" placeholder="请输入消息" class="msg-box" v-model="message" @keyup.enter="send"></p>
         <button @click="send">ENTER</button>
@@ -92,20 +95,18 @@ var app = new Vue({
     delimiters: ['[[', ']]'],
     data: {
         ws: this.ws,
-        status: '下线', // 用户是否在线
+        status: '离线', // 用户是否在线
         message: '',
         reply: '',
         ws: '',
-        room_id: '001',
-        user_id: '{{ ip }}'.split('.').join(''), // 根据ip确定默认名字
+        room: '001',
+        name: '{{ ip }}'.split('.').join('').substring(6), // 根据ip确定默认名字
         title: '业务数仓',
         tick: 0, // 用于表示提示新消息的到来
     },
     created: function() {
         document.title = this.title;
         this.initWebSocket();
-        // 异步等待连接建立后发出初始信息，让服务器知道客户端的存在
-        this.send('test');
     },
     destroyed: function() {
         this.ws.close();
@@ -125,50 +126,57 @@ var app = new Vue({
             this.ws.onerror = this.onerror;
             this.ws.onclose = this.onclose;
         },
-        send: function() {
+        send: function(payload) {
             // 不允许发送空消息
             if (this.message.length > 0) {
-                this.ws.send(this.room_id + '|||' + this.user_id + '|||' + this.message);
+                var msg = {
+                    'room': this.room,
+                    'name': this.name,
+                    'ip': '{{ ip }}',
+                    'content': this.message
+                }
+                this.ws.send(JSON.stringify(msg));
+            }
+            else if (payload) {
+                this.ws.send(payload);
             }
             this.scrollToBottom();
             this.message = ''
         },
-        initSend: function() {
-            // 用于激活服务器..说白了是我不想改后台代码
-            this.ws.onopen = () => {
-                this.ws.send('wake');
-            }
+        login: function() {
+            this.send();
+            this.status = '已登录';
         },
         onmessage: function(e) {
             // setInterval(this.change_title, 1000);
             var msg = e.data.split('|||');
-            var room_id = msg[0];
-            var user_id = msg[1];
+            var room = msg[0];
+            var name = msg[1];
             var content = msg[2];
-            this.reply += '<p class="item">' + '[' + user_id + ']: ' + content + '</p>';
-            if (this.user_id != user_id) {
+            this.reply += '<p class="item">' + '[' + name + ']: ' + content + '</p>';
+            if (this.name != name) {
                 this.tick ++;     // 自己的消息不算新消息
             }
         },
         onopen: function() { 
             if (this.ws.readyState == 1) {
                 console.log('connection success');
-                this.status = '在线';
+                this.status = '已连接服务器';
             } else {
                 console.log('connection failed');
-                this.status = '下线';
+                this.status = '服务器断开';
             }
             
         },
         onerror: function() {},
         onclose: function() { 
-            console.log('closed');
+            console.log('重来中...');
             this.onopen(); //重连
         },
         scrollToBottom: function () {
             this.$nextTick(() => {
                 var container = this.$el.querySelector("#chatbox");
-                container.scrollTop = container.scrollHeight + 100;
+                container.scrollTop = container.scrollHeight + 200;
             });
         }
     }

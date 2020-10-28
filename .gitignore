@@ -9,6 +9,7 @@ media/
 tests/
 geckodriver.log
 migrations/
+db.sqlite3
 # C extensions
 *.so
 
